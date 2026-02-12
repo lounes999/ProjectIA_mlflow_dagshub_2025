@@ -16,12 +16,14 @@ objectif principal
 une URL publique.
 Ce document explique toutes les étapes suivies, de manière claire et détaillée, comme si nous l’avons
 rédigé nous-mêmes.
+
 2. Préparation de l’API en local
 
 Avant toute forme de déploiement, nous avons d’abord vérifié que notre API fonctionne correctement
 localement.
 
 2.1 Installation de l’environnement
+
 Nous avons commencé par installer toutes les dépendances du projet à l’aide du fichier
 requirements.txt. Ce fichier
 contient FastAPI, Uvicorn, scikit-learn, numpy et d’autres librairies essentielles.
@@ -29,6 +31,7 @@ Commande utilisée :
 pip install -r requirements.txt
 
 2.2 Lancement local de l’API
+
 Pour vérifier que l’API fonctionne sans Docker, nous avons utilisé la commande suivante :
 uvicorn app:app --reload
 Grâce à --reload, toutes les modifications apportées au code se rechargent automatiquement.
@@ -44,16 +47,19 @@ Une fois l’API démarrée :
 3. Dockerisation du projet
 
 Après avoir validé que tout fonctionne localement, nous avons conteneurisé l’API.
+
 3.1 Construction de l’image Docker
 
 La commande suivante construit l’image basée sur le Dockerfile :
 docker build -t projet-ia .
+
 3.2 Exécution du conteneur Docker
 
 Une fois l’image créée :
 docker run -p 8000:8000 projet-ia
 Cela permet d’accéder à l’API à :
 http://localhost:8000
+
 3.3 Vérification du conteneur
 
 Pour confirmer que l’image tourne dans Docker, nous avons utilisé :
@@ -69,11 +75,13 @@ Ce fichier contient toutes les instructions pour créer l’image de l’API :
 - Installation des dépendances
 - Copie du code de l’API
 - Démarrage automatique d’Uvicorn
+
 4.2 Le fichier requirements.txt
 
 Il liste les versions exactes des librairies nécessaires à la bonne exécution de l’API. Grâce à ce fichier,
 Docker
 installe les bonnes versions et évite les erreurs liées au chargement du modèle (model.pkl).
+
 5. Structure complète du projet
 
 La structure de notre projet se présente ainsi :
@@ -85,6 +93,7 @@ Dockerfile ® Instructions Docker
 .dockerignore ® Fichiers ignorés durant le build
 journal_de_projet.md ® Journal technique du projet
 README.pdf ® Documentation du projet
+
 6. Déploiement sur Google Cloud Run
 
 Une fois l’API prête dans Docker, nous avons déployé notre conteneur sur Google Cloud Run.
@@ -94,6 +103,7 @@ Une fois l’API prête dans Docker, nous avons déployé notre conteneur sur Go
 - Déploiement du conteneur sur Cloud Run avec autorisation publique
 L’URL générée par Google Cloud Run est :
 https://mon-app-328785983070.us-central1.run.app
+
 7. Test en ligne avec Postman
 
 Nous avons utilisé Postman pour tester la version en ligne de l’API. Nous avons envoyé un JSON
@@ -102,12 +112,14 @@ contenant une phrase
 Exemple :
 {"text": "sports news today"}
 Cloud Run a répondu correctement, confirmant que le modèle fonctionne en production.
+
 8. Erreurs rencontrées et solutions appliquées
 
 - Problème de version scikit-learn : le modèle ne se chargeait pas. Solution : fixer la version correcte.
 - model.pkl introuvable : ajustement de la COPY dans le Dockerfile.
 - Format JSON incorrect dans Postman : correction de l’attribut "text".
 - Autorisations Cloud Run bloquées : activation de l’accès public.
+
 9. Conclusion
 
   Ce travail nous a permis de comprendre toute la chaîne de déploiement d’un projet IA : préparation du
