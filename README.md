@@ -1,7 +1,11 @@
 README – Déploiement de l’API IA 
+
 Auteurs : Lounes Behlouli
+
 Cours : Projet IA – Méthodologie et Déploiement (UA3)
+
 Date : Novembre 2025
+
 1. Introduction générale
 Dans ce projet, nous avons travaillé ensemble pour développer une API d’intelligence artificielle avec
 FastAPI,
