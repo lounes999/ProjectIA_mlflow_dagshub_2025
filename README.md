@@ -14,8 +14,7 @@ l’intégrer dans un conteneur Docker, puis la déployer publiquement sur Googl
 objectif principal
 était de passer d’un modèle IA entraîné dans un notebook local à un service en ligne accessible via
 une URL publique.
-Ce document explique toutes les étapes suivies, de manière claire et détaillée, comme si nous l’avons
-rédigé nous-mêmes.
+Ce document explique toutes les étapes suivies, de manière claire et détaillée.
 
 2. Préparation de l’API en local
 
