@@ -1,130 +1,96 @@
-README – Déploiement de l’API IA 
+# MediaNova — Classification automatique d’articles (BBC)  
+**Partie 1 : Choix du modèle (NLP/ML)** • **Partie 2 : Déploiement (FastAPI • Docker • Cloud Run)**
 
-Auteurs : Lounes Behlouli
+## Introduction (contexte)
+### a) Client fictif
+**MediaNova** est un groupe média numérique fictif qui publie chaque jour des centaines d’articles et newsletters. L’entreprise souhaite améliorer l’organisation et la découvrabilité de ses contenus (site, app, infolettres). Elle veut un système qui classe automatiquement les articles par thème pour accélérer la mise en ligne, faciliter la recherche interne et personnaliser les recommandations.
 
-Cours : Projet IA – Méthodologie et Déploiement (UA3)
+### b) Problématique métier
+Comment automatiser l’assignation d’un thème à chaque article (ex. *sport, business, tech, entertainment, politics*) pour :
+- accélérer le flux éditorial (moins d’annotations manuelles),
+- améliorer la navigation et la recherche,
+- préparer la personnalisation des contenus.
 
-Date : Novembre 2025
+---
 
-1. Introduction générale
+## À propos du projet
+Projet réalisé dans le cadre du cours **Projet IA : Méthodologie et déploiement**.  
+**Auteurs :** Lounes Behlouli **  
+**Période :** 1 mois  
+**Tâche :** classifier des articles du dataset **BBC-text.csv** en 5 catégories :  
+`business`, `politics`, `sport`, `tech`, `entertainment`.
 
-Dans ce projet, nous avons travaillé ensemble pour développer une API d’intelligence artificielle avec
-FastAPI,
-l’intégrer dans un conteneur Docker, puis la déployer publiquement sur Google Cloud Run. Notre
-objectif principal
-était de passer d’un modèle IA entraîné dans un notebook local à un service en ligne accessible via
-une URL publique.
-Ce document explique toutes les étapes suivies, de manière claire et détaillée.
+---
 
-2. Préparation de l’API en local
+## Partie 1 — Choix du modèle (Modélisation)
 
-Avant toute forme de déploiement, nous avons d’abord vérifié que notre API fonctionne correctement
-localement.
+### Données
+- **Dataset :** `BBC-text.csv`
+- **Taille :** 2225 articles
+- **Cible :** `category`
+- **Texte :** `text`
+- **Qualité :**
+  - pas de valeurs manquantes notables
+  - doublons détectés puis supprimés
 
-2.1 Installation de l’environnement
+### Prétraitement NLP
+- mise en minuscules
+- suppression : liens, chiffres, ponctuation, caractères spéciaux
+- suppression des doublons
+- vectorisation **TF‑IDF**
+  - `stop_words='english'`
+  - tests sur `ngram_range`: (1,1) et (1,2)
+  - tests sur `max_df`: 0.9 et 1.0
 
-Nous avons commencé par installer toutes les dépendances du projet à l’aide du fichier
-requirements.txt. Ce fichier
-contient FastAPI, Uvicorn, scikit-learn, numpy et d’autres librairies essentielles.
-Commande utilisée :
-pip install -r requirements.txt
+### Modèles comparés (baseline)
+Trois modèles supervisés ont été testés :
+- **Multinomial Naive Bayes**
+- **LinearSVC (SVM linéaire)**
+- **Régression Logistique**
 
-2.2 Lancement local de l’API
+Résultat : les modèles obtiennent d’excellentes performances (> 97%). Les meilleurs candidats étaient **LinearSVC** et **Régression Logistique**.
 
-Pour vérifier que l’API fonctionne sans Docker, nous avons utilisé la commande suivante :
-uvicorn app:app --reload
-Grâce à --reload, toutes les modifications apportées au code se rechargent automatiquement.
+### Optimisation (GridSearchCV)
+Mise en place d’une recherche par grille avec validation croisée **3-fold** sur le pipeline :
 
-2.3 Vérifications locales
+**TF‑IDF → Modèle (LinearSVC / Logistic Regression)**
 
-Une fois l’API démarrée :
-- L’URL http://127.0.0.1:8000/health devait afficher un statut simple comme {"status": "API OK"}.
-- La documentation Swagger http://127.0.0.1:8000/docs nous a permis de tester facilement l’endpoint
-/predict.
-- Nous avons envoyé un JSON comme {"text": "bonjour"} et avons reçu la prédiction du modèle IA.
+Paramètres explorés :
+- `tfidf__ngram_range` : (1,1), (1,2)
+- `tfidf__max_df` : 0.9, 1.0
+- `model__C` : 0.5, 1, 2
 
-3. Dockerisation du projet
+Meilleures combinaisons :
+- **Best LinearSVC** : `C=0.5`, `ngram_range=(1,2)`, `max_df=0.9`
+- **Best Logistic Regression** : `C=2`, `ngram_range=(1,2)`, `max_df=0.9`
 
-Après avoir validé que tout fonctionne localement, nous avons conteneurisé l’API.
+### Résultats (test)
+- **Best SVC** : Accuracy ≈ **0.9798**, F1 ≈ **0.9797**
+- **Best Logistic Regression** : Accuracy ≈ **0.9865**, F1 ≈ **0.9865**
 
-3.1 Construction de l’image Docker
+### Modèle final retenu
+**Régression Logistique optimisée** (modèle final)
 
-La commande suivante construit l’image basée sur le Dockerfile :
-docker build -t projet-ia .
+Justification :
+- **Performance** : meilleurs scores globaux
+- **Stabilité** : résultats équilibrés sur les catégories
+- **Interprétabilité** : modèle linéaire (mots représentatifs par classe)
+- **Efficacité** : entraînement rapide et bonne généralisation
 
-3.2 Exécution du conteneur Docker
+---
 
-Une fois l’image créée :
-docker run -p 8000:8000 projet-ia
-Cela permet d’accéder à l’API à :
-http://localhost:8000
+## Partie 2 — Déploiement (API FastAPI + Docker + Cloud Run)
 
-3.3 Vérification du conteneur
+### Objectif
+Déployer le modèle entraîné sous forme de **service web** accessible via une **URL publique**, en passant par :
+1) API FastAPI (local)  
+2) Conteneur Docker  
+3) Déploiement sur **Google Cloud Run**
 
-Pour confirmer que l’image tourne dans Docker, nous avons utilisé :
-docker ps
+### API (FastAPI)
+- `GET /health` → retourne un statut (ex. `{"status": "API OK"}`)
+- `POST /predict` → retourne la catégorie prédite à partir d’un texte
 
-4. Explication des fichiers clés
-
-4.1 Le Dockerfile
-
-Ce fichier contient toutes les instructions pour créer l’image de l’API :
-- Installation de Python
-- Copie de requirements.txt
-- Installation des dépendances
-- Copie du code de l’API
-- Démarrage automatique d’Uvicorn
-
-4.2 Le fichier requirements.txt
-
-Il liste les versions exactes des librairies nécessaires à la bonne exécution de l’API. Grâce à ce fichier,
-Docker
-installe les bonnes versions et évite les erreurs liées au chargement du modèle (model.pkl).
-
-5. Structure complète du projet
-
-La structure de notre projet se présente ainsi :
-projet_ia/
-app.py ® Fichier principal de l’API FastAPI
-model.pkl ® Modèle IA entraîné
-requirements.txt ® Dépendances Python
-Dockerfile ® Instructions Docker
-.dockerignore ® Fichiers ignorés durant le build
-journal_de_projet.md ® Journal technique du projet
-README.pdf ® Documentation du projet
-
-6. Déploiement sur Google Cloud Run
-
-Une fois l’API prête dans Docker, nous avons déployé notre conteneur sur Google Cloud Run.
-Étapes principales :
-- Connexion à Google Cloud via gcloud
-- Build de notre image et envoi vers Container Registry
-- Déploiement du conteneur sur Cloud Run avec autorisation publique
-L’URL générée par Google Cloud Run est :
-https://mon-app-328785983070.us-central1.run.app
-
-7. Test en ligne avec Postman
-
-Nous avons utilisé Postman pour tester la version en ligne de l’API. Nous avons envoyé un JSON
-contenant une phrase
-à analyser, et l’API nous a renvoyé la catégorie correspondante.
-Exemple :
-{"text": "sports news today"}
-Cloud Run a répondu correctement, confirmant que le modèle fonctionne en production.
-
-8. Erreurs rencontrées et solutions appliquées
-
-- Problème de version scikit-learn : le modèle ne se chargeait pas. Solution : fixer la version correcte.
-- model.pkl introuvable : ajustement de la COPY dans le Dockerfile.
-- Format JSON incorrect dans Postman : correction de l’attribut "text".
-- Autorisations Cloud Run bloquées : activation de l’accès public.
-
-9. Conclusion
-
-  Ce travail nous a permis de comprendre toute la chaîne de déploiement d’un projet IA : préparation du
-modèle,
-développement d’une API, conteneurisation Docker et déploiement sur Google Cloud Run. Nous avons
-appris à créer
-des images Docker fiables, à utiliser Cloud Run pour rendre une API disponible publiquement, et à
-tester une
-solution IA comme dans un vrai contexte professionnel
+Exemple de requête :
+```json  
+{"text": "sports news today"}  
